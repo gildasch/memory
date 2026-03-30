@@ -14,10 +14,12 @@ Open [index.html](./index.html) in a browser.
 - Compact game HUD for moves, pairs left, and time.
 - White framed cards with a subtle 3D feel and restrained shadows.
 - Slight left or right flip variation on each turn without drifting outside the card slot.
+- Wikipedia/Wikimedia image sources tracked in `assets/wikimedia-sources.json`.
 
 ## Files
 
 - `index.html` renders the game shell and board.
 - `styles.css` defines the minimalist layout and card design.
-- `theme-data.js` builds the themed front artwork used on the cards.
+- `theme-data.js` contains the themed image manifest used on the cards.
+- `assets/wikimedia-sources.json` records the Wikipedia pages and thumbnail URLs used for each theme.
 - `script.js` handles setup controls, shuffle, game state, timing, and card flipping.

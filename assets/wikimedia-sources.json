@@ -1,4 +1,4 @@
-﻿window.THEMES = {
+﻿{
     "animals":  {
                     "label":  "Animals",
                     "items":  [
@@ -1159,4 +1159,4 @@
                                    }
                                ]
                  }
-};
+}
