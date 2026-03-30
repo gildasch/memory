@@ -1,0 +1,27 @@
+:root {
+  color-scheme: light;
+  font-family: "Manrope", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.app-shell {
+  padding: 48px 24px 72px;
+}
+
+.hero h1,
+.hero p {
+  margin: 0;
+}
+
+.catalog {
+  margin-top: 32px;
+}
+
