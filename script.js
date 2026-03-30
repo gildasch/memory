@@ -14,12 +14,12 @@ const variants = [
       duration: 960,
       easing: "cubic-bezier(0.22, 1, 0.36, 1)",
       mid: 0.5,
-      lift: [16, 22],
-      pitch: [8, 12],
-      roll: [2.2, 4.5],
-      overshoot: 9,
-      scale: 1.01,
-      shadowBoost: 1.18,
+      lift: [6, 9],
+      pitch: [6, 9],
+      roll: [1.8, 3.2],
+      overshoot: 6,
+      scale: 1.004,
+      shadowBoost: 1.08,
     },
   },
   {
@@ -37,12 +37,12 @@ const variants = [
       duration: 1040,
       easing: "cubic-bezier(0.19, 0.97, 0.34, 1)",
       mid: 0.48,
-      lift: [20, 28],
-      pitch: [10, 16],
-      roll: [3.4, 6.8],
-      overshoot: 12,
-      scale: 1.02,
-      shadowBoost: 1.32,
+      lift: [8, 11],
+      pitch: [7, 10],
+      roll: [2.6, 4.6],
+      overshoot: 7,
+      scale: 1.006,
+      shadowBoost: 1.12,
     },
   },
   {
@@ -60,12 +60,12 @@ const variants = [
       duration: 740,
       easing: "cubic-bezier(0.34, 1.56, 0.46, 1)",
       mid: 0.44,
-      lift: [12, 18],
-      pitch: [7, 10],
-      roll: [1.8, 3.3],
-      overshoot: 14,
-      scale: 1.005,
-      shadowBoost: 1.12,
+      lift: [4, 7],
+      pitch: [5, 7],
+      roll: [1.3, 2.4],
+      overshoot: 8,
+      scale: 1.002,
+      shadowBoost: 1.04,
     },
   },
   {
@@ -83,12 +83,12 @@ const variants = [
       duration: 1180,
       easing: "cubic-bezier(0.2, 0.85, 0.24, 1)",
       mid: 0.52,
-      lift: [18, 24],
-      pitch: [9, 13],
-      roll: [4.5, 7.2],
-      overshoot: 7,
-      scale: 1.015,
-      shadowBoost: 1.28,
+      lift: [7, 10],
+      pitch: [6, 9],
+      roll: [2.8, 4.4],
+      overshoot: 5,
+      scale: 1.004,
+      shadowBoost: 1.1,
     },
   },
 ];
@@ -221,7 +221,7 @@ function motionTransform({ rotation, pitch, roll, lift, scale }) {
 
 function shadowTransform(direction, distance) {
   const offset = direction === "left" ? -distance : distance;
-  return `translate3d(${offset}px, 14px, 0) scale(${1 + Math.abs(offset) / 42})`;
+  return `translate3d(${offset}px, 8px, 0) scale(${1 + Math.abs(offset) / 90})`;
 }
 
 function flipCard(card, forceFace) {
@@ -252,8 +252,10 @@ function flipCard(card, forceFace) {
 
   card.dataset.animating = "true";
   card.dataset.direction = direction;
-  body.style.transformOrigin = direction === "left" ? "18% 50%" : "82% 50%";
-  shadow.style.transformOrigin = body.style.transformOrigin;
+  body.style.transformOrigin = "50% 50%";
+  shadow.style.transformOrigin = "50% 50%";
+  card.style.setProperty("--flip-direction", sign);
+  card.style.setProperty("--flip-glint-shift", `${sign * 10}px`);
 
   telemetry.querySelector('[data-field="direction"]').textContent = `Entry: ${direction}`;
   telemetry.querySelector('[data-field="tilt"]').textContent = `Tilt: ${formatSigned(
@@ -285,9 +287,9 @@ function flipCard(card, forceFace) {
       {
         transform: motionTransform({
           rotation: targetRotation,
-          pitch: 0.9,
+          pitch: 0.5,
           roll: settleRoll,
-          lift: -4,
+          lift: -1,
           scale: 1,
         }),
       },
@@ -301,31 +303,19 @@ function flipCard(card, forceFace) {
 
   shadow.animate(
     [
-      { opacity: 0.25, transform: shadowTransform(direction, 0), filter: "blur(14px)" },
+      { opacity: 0.22, transform: shadowTransform(direction, 0), filter: "blur(12px)" },
       {
         offset: 0.45,
-        opacity: 0.38,
-        transform: shadowTransform(direction, 12 * variant.motion.shadowBoost),
-        filter: "blur(18px)",
+        opacity: 0.3,
+        transform: shadowTransform(direction, 6 * variant.motion.shadowBoost),
+        filter: "blur(14px)",
       },
-      { opacity: 0.26, transform: shadowTransform(direction, 3), filter: "blur(15px)" },
+      { opacity: 0.22, transform: shadowTransform(direction, 2), filter: "blur(12px)" },
     ],
     {
       duration: variant.motion.duration,
       easing: variant.motion.easing,
       fill: "forwards",
-    },
-  );
-
-  card.animate(
-    [
-      { transform: "translateY(0px)" },
-      { offset: 0.45, transform: `translateY(${liftPeak * 0.28}px)` },
-      { transform: "translateY(0px)" },
-    ],
-    {
-      duration: variant.motion.duration,
-      easing: variant.motion.easing,
     },
   );
 
@@ -339,8 +329,8 @@ function flipCard(card, forceFace) {
       lift: 0,
       scale: 1,
     });
-    shadow.style.transform = shadowTransform(direction, 3);
-    shadow.style.opacity = "0.26";
+    shadow.style.transform = shadowTransform(direction, 2);
+    shadow.style.opacity = "0.22";
   });
 }
 
