@@ -31,6 +31,7 @@ const newGameButton = document.querySelector("#new-game");
 const state = {
   cards: [],
   flippedCards: [],
+  pendingMismatch: null,
   matchedPairs: 0,
   moves: 0,
   busy: false,
@@ -246,23 +247,30 @@ function flipCardElement(cardElement, nextFace) {
   });
 }
 
-async function handleMismatch() {
+function handleMismatch() {
+  state.pendingMismatch = [...state.flippedCards];
+  setStatus("Not a pair. Pick a different card to begin the next turn.");
+}
+
+async function clearPendingMismatch() {
+  if (!state.pendingMismatch) {
+    return;
+  }
+
+  const pendingPair = state.pendingMismatch;
+  state.pendingMismatch = null;
   state.busy = true;
-  setStatus("Not a pair. The cards turn back quietly.");
-  const [firstCard, secondCard] = state.flippedCards;
 
-  await Promise.all([firstCard.flipPromise, secondCard.flipPromise]);
-  await new Promise((resolve) => window.setTimeout(resolve, 180));
-  await Promise.all([
-    flipCardElement(firstCard.element, "back"),
-    flipCardElement(secondCard.element, "back"),
-  ]);
+  await Promise.all(pendingPair.map((card) => card.flipPromise));
 
-  firstCard.element.setAttribute("aria-label", "Hidden card");
-  secondCard.element.setAttribute("aria-label", "Hidden card");
+  pendingPair.forEach((card) => {
+    card.flipPromise = flipCardElement(card.element, "back").then(() => {
+      card.element.setAttribute("aria-label", "Hidden card");
+    });
+  });
+
   state.flippedCards = [];
   state.busy = false;
-  setStatus("Keep going. There is always a little left or right bias in the turn.");
 }
 
 function handleMatch() {
@@ -292,17 +300,27 @@ async function onCardClick(event) {
   const cardElement = event.currentTarget;
   const card = state.cards.find((entry) => entry.key === cardElement.dataset.key);
 
-  if (
-    !card ||
-    state.busy ||
-    card.matched ||
-    state.flippedCards.length >= 2 ||
-    state.flippedCards.some((entry) => entry.key === card.key)
-  ) {
+  if (!card || state.busy || card.matched || state.flippedCards.some((entry) => entry.key === card.key)) {
     return;
   }
 
   if (cardElement.dataset.face === "front") {
+    return;
+  }
+
+  if (cardElement.dataset.animating === "true") {
+    return;
+  }
+
+  if (state.pendingMismatch) {
+    if (state.pendingMismatch.some((entry) => entry.key === card.key)) {
+      return;
+    }
+
+    await clearPendingMismatch();
+  }
+
+  if (state.flippedCards.length >= 2) {
     return;
   }
 
@@ -327,7 +345,7 @@ async function onCardClick(event) {
     return;
   }
 
-  await handleMismatch();
+  handleMismatch();
 }
 
 function attachBoardEvents() {
@@ -340,6 +358,7 @@ function newGame() {
   resetTimer();
   state.cards = createDeck().map((card) => ({ ...card, matched: false, element: null, flipPromise: null }));
   state.flippedCards = [];
+  state.pendingMismatch = null;
   state.matchedPairs = 0;
   state.moves = 0;
   state.busy = false;
