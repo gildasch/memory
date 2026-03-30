@@ -10,23 +10,14 @@ const SNAP_TURN = {
   shadowBoost: 1.04,
 };
 
-const ARTWORKS = [
-  { id: "berries", className: "art--berries", label: "Berry Cluster" },
-  { id: "iris", className: "art--iris", label: "Blue Iris" },
-  { id: "tree", className: "art--tree", label: "Tree Canopy" },
-  { id: "gulls", className: "art--gulls", label: "Seagull Flight" },
-  { id: "meadow", className: "art--meadow", label: "Meadow Flowers" },
-  { id: "horse", className: "art--horse", label: "Coastal Horses" },
-  { id: "berries-2", className: "art--berries", label: "Berry Cluster" },
-  { id: "tree-2", className: "art--tree", label: "Tree Canopy" },
-];
-
 const board = document.querySelector("#board");
 const statusText = document.querySelector("#status");
 const movesValue = document.querySelector("#moves");
 const timerValue = document.querySelector("#timer");
 const pairsLeftValue = document.querySelector("#pairs-left");
 const newGameButton = document.querySelector("#new-game");
+const themeSelect = document.querySelector("#theme-select");
+const pairsSelect = document.querySelector("#pairs-select");
 
 const state = {
   cards: [],
@@ -37,6 +28,8 @@ const state = {
   busy: false,
   timerId: null,
   startTime: null,
+  selectedThemeId: "animals",
+  pairCount: 8,
 };
 
 function randomBetween(min, max) {
@@ -45,12 +38,10 @@ function randomBetween(min, max) {
 
 function shuffle(items) {
   const copy = [...items];
-
   for (let index = copy.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1));
     [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
   }
-
   return copy;
 }
 
@@ -69,6 +60,38 @@ function shadowTransform(direction, distance) {
   return `translate3d(${offset}px, 8px, 0) scale(${1 + Math.abs(offset) / 90})`;
 }
 
+function clampPairCount() {
+  const maxPairs = THEMES[state.selectedThemeId].items.length;
+  state.pairCount = Math.max(2, Math.min(state.pairCount, maxPairs));
+}
+
+function populateThemeSelect() {
+  themeSelect.innerHTML = Object.entries(THEMES)
+    .map(
+      ([themeId, theme]) =>
+        `<option value="${themeId}" ${themeId === state.selectedThemeId ? "selected" : ""}>${theme.label}</option>`,
+    )
+    .join("");
+}
+
+function populatePairSelect() {
+  const maxPairs = THEMES[state.selectedThemeId].items.length;
+  pairsSelect.innerHTML = Array.from({ length: maxPairs - 1 }, (_, index) => index + 2)
+    .map(
+      (pairCount) =>
+        `<option value="${pairCount}" ${pairCount === state.pairCount ? "selected" : ""}>${pairCount}</option>`,
+    )
+    .join("");
+}
+
+function syncControls() {
+  clampPairCount();
+  populateThemeSelect();
+  populatePairSelect();
+  themeSelect.value = state.selectedThemeId;
+  pairsSelect.value = String(state.pairCount);
+}
+
 function updateHud() {
   movesValue.textContent = String(state.moves);
   pairsLeftValue.textContent = String((state.cards.length / 2) - state.matchedPairs);
@@ -82,7 +105,6 @@ function resetTimer() {
   if (state.timerId) {
     window.clearInterval(state.timerId);
   }
-
   state.timerId = null;
   state.startTime = null;
   timerValue.textContent = "00:00";
@@ -92,7 +114,6 @@ function startTimerIfNeeded() {
   if (state.timerId || state.startTime) {
     return;
   }
-
   state.startTime = Date.now();
   state.timerId = window.setInterval(() => {
     const elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000);
@@ -104,13 +125,21 @@ function stopTimer() {
   if (state.timerId) {
     window.clearInterval(state.timerId);
   }
-
   state.timerId = null;
 }
 
+function getBoardColumns(totalCards) {
+  if (totalCards <= 16) return 4;
+  if (totalCards <= 24) return 5;
+  if (totalCards <= 32) return 6;
+  return 8;
+}
+
 function createDeck() {
+  const theme = THEMES[state.selectedThemeId];
+  const chosenItems = shuffle(theme.items).slice(0, state.pairCount);
   return shuffle(
-    ARTWORKS.flatMap((artwork) => [
+    chosenItems.flatMap((artwork) => [
       { key: `${artwork.id}-a`, pairId: artwork.id, artwork },
       { key: `${artwork.id}-b`, pairId: artwork.id, artwork },
     ]),
@@ -118,6 +147,7 @@ function createDeck() {
 }
 
 function renderBoard() {
+  board.style.setProperty("--board-columns", String(getBoardColumns(state.cards.length)));
   board.innerHTML = state.cards
     .map(
       (card) => `
@@ -137,7 +167,7 @@ function renderBoard() {
             </span>
             <span class="memory-card__face memory-card__face--front">
               <span class="memory-card__print">
-                <span class="memory-card__art ${card.artwork.className}" aria-hidden="true"></span>
+                <span class="memory-card__art" style="background-image: url('${card.artwork.imageUrl}')" aria-hidden="true"></span>
               </span>
             </span>
           </span>
@@ -172,15 +202,7 @@ function flipCardElement(cardElement, nextFace) {
 
   const bodyAnimation = body.animate(
     [
-      {
-        transform: motionTransform({
-          rotation: currentRotation,
-          pitch: 0,
-          roll: 0,
-          lift: 0,
-          scale: 1,
-        }),
-      },
+      { transform: motionTransform({ rotation: currentRotation, pitch: 0, roll: 0, lift: 0, scale: 1 }) },
       {
         offset: SNAP_TURN.mid,
         transform: motionTransform({
@@ -191,39 +213,18 @@ function flipCardElement(cardElement, nextFace) {
           scale: SNAP_TURN.scale,
         }),
       },
-      {
-        transform: motionTransform({
-          rotation: targetRotation,
-          pitch: 0.5,
-          roll: settleRoll,
-          lift: -1,
-          scale: 1,
-        }),
-      },
+      { transform: motionTransform({ rotation: targetRotation, pitch: 0.5, roll: settleRoll, lift: -1, scale: 1 }) },
     ],
-    {
-      duration: SNAP_TURN.duration,
-      easing: SNAP_TURN.easing,
-      fill: "forwards",
-    },
+    { duration: SNAP_TURN.duration, easing: SNAP_TURN.easing, fill: "forwards" },
   );
 
   shadow.animate(
     [
       { opacity: 0.18, transform: shadowTransform(direction, 0), filter: "blur(12px)" },
-      {
-        offset: 0.45,
-        opacity: 0.26,
-        transform: shadowTransform(direction, 6 * SNAP_TURN.shadowBoost),
-        filter: "blur(14px)",
-      },
+      { offset: 0.45, opacity: 0.26, transform: shadowTransform(direction, 6 * SNAP_TURN.shadowBoost), filter: "blur(14px)" },
       { opacity: 0.18, transform: shadowTransform(direction, 2), filter: "blur(12px)" },
     ],
-    {
-      duration: SNAP_TURN.duration,
-      easing: SNAP_TURN.easing,
-      fill: "forwards",
-    },
+    { duration: SNAP_TURN.duration, easing: SNAP_TURN.easing, fill: "forwards" },
   );
 
   return new Promise((resolve) => {
@@ -231,13 +232,7 @@ function flipCardElement(cardElement, nextFace) {
       "finish",
       () => {
         cardElement.dataset.animating = "false";
-        body.style.transform = motionTransform({
-          rotation: targetRotation,
-          pitch: 0,
-          roll: 0,
-          lift: 0,
-          scale: 1,
-        });
+        body.style.transform = motionTransform({ rotation: targetRotation, pitch: 0, roll: 0, lift: 0, scale: 1 });
         shadow.style.transform = shadowTransform(direction, 2);
         shadow.style.opacity = "0.18";
         resolve();
@@ -256,19 +251,15 @@ async function clearPendingMismatch() {
   if (!state.pendingMismatch) {
     return;
   }
-
   const pendingPair = state.pendingMismatch;
   state.pendingMismatch = null;
   state.busy = true;
-
   await Promise.all(pendingPair.map((card) => card.flipPromise));
-
   pendingPair.forEach((card) => {
     card.flipPromise = flipCardElement(card.element, "back").then(() => {
       card.element.setAttribute("aria-label", "Hidden card");
     });
   });
-
   state.flippedCards = [];
   state.busy = false;
 }
@@ -292,7 +283,6 @@ function handleMatch() {
     setStatus(`Board cleared in ${state.moves} moves.`);
     return;
   }
-
   setStatus("Pair found. Keep the rhythm.");
 }
 
@@ -300,29 +290,15 @@ async function onCardClick(event) {
   const cardElement = event.currentTarget;
   const card = state.cards.find((entry) => entry.key === cardElement.dataset.key);
 
-  if (!card || state.busy || card.matched || state.flippedCards.some((entry) => entry.key === card.key)) {
-    return;
-  }
-
-  if (cardElement.dataset.face === "front") {
-    return;
-  }
-
-  if (cardElement.dataset.animating === "true") {
-    return;
-  }
+  if (!card || state.busy || card.matched || state.flippedCards.some((entry) => entry.key === card.key)) return;
+  if (cardElement.dataset.face === "front" || cardElement.dataset.animating === "true") return;
 
   if (state.pendingMismatch) {
-    if (state.pendingMismatch.some((entry) => entry.key === card.key)) {
-      return;
-    }
-
+    if (state.pendingMismatch.some((entry) => entry.key === card.key)) return;
     await clearPendingMismatch();
   }
 
-  if (state.flippedCards.length >= 2) {
-    return;
-  }
+  if (state.flippedCards.length >= 2) return;
 
   startTimerIfNeeded();
   cardElement.setAttribute("aria-label", card.artwork.label);
@@ -339,12 +315,10 @@ async function onCardClick(event) {
   updateHud();
 
   const [firstCard, secondCard] = state.flippedCards;
-
   if (firstCard.pairId === secondCard.pairId) {
     handleMatch();
     return;
   }
-
   handleMismatch();
 }
 
@@ -356,6 +330,7 @@ function attachBoardEvents() {
 
 function newGame() {
   resetTimer();
+  clampPairCount();
   state.cards = createDeck().map((card) => ({ ...card, matched: false, element: null, flipPromise: null }));
   state.flippedCards = [];
   state.pendingMismatch = null;
@@ -365,9 +340,23 @@ function newGame() {
   renderBoard();
   attachBoardEvents();
   updateHud();
-  setStatus("Find all matching pairs. Cards flip with a slight left or right bias, but stay inside the grid.");
+  setStatus(`${THEMES[state.selectedThemeId].label}. ${state.pairCount} pairs selected. New games draw a random subset from twenty themed fronts.`);
 }
+
+themeSelect.addEventListener("change", () => {
+  state.selectedThemeId = themeSelect.value;
+  clampPairCount();
+  populatePairSelect();
+  pairsSelect.value = String(state.pairCount);
+  newGame();
+});
+
+pairsSelect.addEventListener("change", () => {
+  state.pairCount = Number(pairsSelect.value);
+  newGame();
+});
 
 newGameButton.addEventListener("click", newGame);
 
+syncControls();
 newGame();

@@ -76,6 +76,37 @@ h1 {
   max-width: 520px;
 }
 
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.field__label {
+  font-size: 0.69rem;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.field__control {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0 14px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  box-shadow: 0 8px 20px var(--shadow-soft);
+}
+
 .intro p,
 .board-copy__text {
   margin: 0;
@@ -141,7 +172,7 @@ h1 {
 
 .board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--board-columns, 4), minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -266,6 +297,8 @@ h1 {
 
 .memory-card__art {
   background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .memory-card.is-matched .memory-card__shadow {
