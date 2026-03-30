@@ -166,6 +166,7 @@ function flipCardElement(cardElement, nextFace) {
     currentRotation + (targetRotation - currentRotation) * SNAP_TURN.mid + SNAP_TURN.overshoot * sign;
 
   cardElement.dataset.animating = "true";
+  cardElement.dataset.face = nextFace;
   cardElement.style.setProperty("--flip-glint-shift", `${sign * 8}px`);
 
   const bodyAnimation = body.animate(
@@ -228,7 +229,6 @@ function flipCardElement(cardElement, nextFace) {
     bodyAnimation.addEventListener(
       "finish",
       () => {
-        cardElement.dataset.face = nextFace;
         cardElement.dataset.animating = "false";
         body.style.transform = motionTransform({
           rotation: targetRotation,
@@ -251,7 +251,8 @@ async function handleMismatch() {
   setStatus("Not a pair. The cards turn back quietly.");
   const [firstCard, secondCard] = state.flippedCards;
 
-  await new Promise((resolve) => window.setTimeout(resolve, 720));
+  await Promise.all([firstCard.flipPromise, secondCard.flipPromise]);
+  await new Promise((resolve) => window.setTimeout(resolve, 180));
   await Promise.all([
     flipCardElement(firstCard.element, "back"),
     flipCardElement(secondCard.element, "back"),
@@ -291,7 +292,13 @@ async function onCardClick(event) {
   const cardElement = event.currentTarget;
   const card = state.cards.find((entry) => entry.key === cardElement.dataset.key);
 
-  if (!card || state.busy || card.matched || state.flippedCards.some((entry) => entry.key === card.key)) {
+  if (
+    !card ||
+    state.busy ||
+    card.matched ||
+    state.flippedCards.length >= 2 ||
+    state.flippedCards.some((entry) => entry.key === card.key)
+  ) {
     return;
   }
 
@@ -300,14 +307,12 @@ async function onCardClick(event) {
   }
 
   startTimerIfNeeded();
-  state.busy = true;
-  await flipCardElement(cardElement, "front");
   cardElement.setAttribute("aria-label", card.artwork.label);
   card.element = cardElement;
+  card.flipPromise = flipCardElement(cardElement, "front");
   state.flippedCards.push(card);
 
   if (state.flippedCards.length < 2) {
-    state.busy = false;
     setStatus("One open card. Find its pair.");
     return;
   }
@@ -319,7 +324,6 @@ async function onCardClick(event) {
 
   if (firstCard.pairId === secondCard.pairId) {
     handleMatch();
-    state.busy = false;
     return;
   }
 
@@ -334,7 +338,7 @@ function attachBoardEvents() {
 
 function newGame() {
   resetTimer();
-  state.cards = createDeck().map((card) => ({ ...card, matched: false, element: null }));
+  state.cards = createDeck().map((card) => ({ ...card, matched: false, element: null, flipPromise: null }));
   state.flippedCards = [];
   state.matchedPairs = 0;
   state.moves = 0;
