@@ -1,19 +1,20 @@
-# Memory Card Catalog
+# Memory
 
-Focused prototype for exploring a polished memory-game card design and a few flip animation variants before building the full game.
+A small browser memory game with a minimalist white interface and one grid-safe flip animation based on the earlier Snap Turn study.
 
 ## Running
 
 Open [index.html](./index.html) in a browser.
 
-## What is in the prototype
+## Features
 
-- A premium-feeling memory card with a white frame, beveled edge, and soft tabletop shadow.
-- Several flip animation variants collected in a browseable catalog.
-- Randomized flip direction and tiny angle offsets on each turn to avoid robotic repetition.
+- Real playable memory board with shuffled pairs.
+- Compact game HUD for moves, pairs left, and time.
+- White framed cards with a subtle 3D feel and restrained shadows.
+- Slight left or right flip variation on each turn without drifting outside the card slot.
 
 ## Files
 
-- `index.html` renders the catalog shell.
-- `styles.css` holds the visual language, layouts, and 3D card styling.
-- `script.js` renders the catalog, flip behaviors, and micro-variation system.
+- `index.html` renders the game shell and board.
+- `styles.css` defines the minimalist layout and card design.
+- `script.js` handles shuffle, game state, timing, and card flipping.

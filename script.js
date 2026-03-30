@@ -1,218 +1,62 @@
-const variants = [
-  {
-    id: "velvet-hinge",
-    number: "01",
-    name: "Velvet Hinge",
-    summary: "Closest to the classic tabletop feel. Gentle rise, soft settle, very playable.",
-    cues: ["calm", "refined", "classic"],
-    stats: {
-      pace: "0.96s",
-      mood: "Soft settle",
-      bias: "subtle hinge",
-    },
-    motion: {
-      duration: 960,
-      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-      mid: 0.5,
-      lift: [6, 9],
-      pitch: [6, 9],
-      roll: [1.8, 3.2],
-      overshoot: 6,
-      scale: 1.004,
-      shadowBoost: 1.08,
-    },
-  },
-  {
-    id: "arc-sweep",
-    number: "02",
-    name: "Arc Sweep",
-    summary: "A slightly bolder arc that feels like the card is sweeping through space.",
-    cues: ["showcase", "floating", "lively"],
-    stats: {
-      pace: "1.04s",
-      mood: "Longer arc",
-      bias: "more lift",
-    },
-    motion: {
-      duration: 1040,
-      easing: "cubic-bezier(0.19, 0.97, 0.34, 1)",
-      mid: 0.48,
-      lift: [8, 11],
-      pitch: [7, 10],
-      roll: [2.6, 4.6],
-      overshoot: 7,
-      scale: 1.006,
-      shadowBoost: 1.12,
-    },
-  },
-  {
-    id: "snap-turn",
-    number: "03",
-    name: "Snap Turn",
-    summary: "Quicker and crisper, with a neat little settle at the end for pair-matching speed.",
-    cues: ["fast", "playful", "clean"],
-    stats: {
-      pace: "0.74s",
-      mood: "Quick snap",
-      bias: "tight settle",
-    },
-    motion: {
-      duration: 740,
-      easing: "cubic-bezier(0.34, 1.56, 0.46, 1)",
-      mid: 0.44,
-      lift: [4, 7],
-      pitch: [5, 7],
-      roll: [1.3, 2.4],
-      overshoot: 8,
-      scale: 1.002,
-      shadowBoost: 1.04,
-    },
-  },
-  {
-    id: "gallery-turn",
-    number: "04",
-    name: "Gallery Turn",
-    summary: "Slightly slower and more elegant, like turning over a little framed print.",
-    cues: ["luxury", "quiet", "intentional"],
-    stats: {
-      pace: "1.18s",
-      mood: "Graceful drift",
-      bias: "tiny roll",
-    },
-    motion: {
-      duration: 1180,
-      easing: "cubic-bezier(0.2, 0.85, 0.24, 1)",
-      mid: 0.52,
-      lift: [7, 10],
-      pitch: [6, 9],
-      roll: [2.8, 4.4],
-      overshoot: 5,
-      scale: 1.004,
-      shadowBoost: 1.1,
-    },
-  },
+const SNAP_TURN = {
+  duration: 740,
+  easing: "cubic-bezier(0.34, 1.56, 0.46, 1)",
+  mid: 0.44,
+  lift: [4, 7],
+  pitch: [5, 7],
+  roll: [1.3, 2.4],
+  overshoot: 8,
+  scale: 1.002,
+  shadowBoost: 1.04,
+};
+
+const ARTWORKS = [
+  { id: "berries", className: "art--berries", label: "Berry Cluster" },
+  { id: "iris", className: "art--iris", label: "Blue Iris" },
+  { id: "tree", className: "art--tree", label: "Tree Canopy" },
+  { id: "gulls", className: "art--gulls", label: "Seagull Flight" },
+  { id: "meadow", className: "art--meadow", label: "Meadow Flowers" },
+  { id: "horse", className: "art--horse", label: "Coastal Horses" },
+  { id: "berries-2", className: "art--berries", label: "Berry Cluster" },
+  { id: "tree-2", className: "art--tree", label: "Tree Canopy" },
 ];
 
-const artworks = [
-  { className: "art--berries", label: "Berry Cluster" },
-  { className: "art--iris", label: "Blue Iris" },
-  { className: "art--tree", label: "Tree Canopy" },
-  { className: "art--gulls", label: "Seagull Flight" },
-  { className: "art--meadow", label: "Meadow Flowers" },
-  { className: "art--horse", label: "Coastal Horses" },
-];
+const board = document.querySelector("#board");
+const statusText = document.querySelector("#status");
+const movesValue = document.querySelector("#moves");
+const timerValue = document.querySelector("#timer");
+const pairsLeftValue = document.querySelector("#pairs-left");
+const newGameButton = document.querySelector("#new-game");
 
-const catalog = document.querySelector("#catalog");
-const boardPreview = document.querySelector("#board-preview");
-const flipAllButton = document.querySelector("#flip-all");
-const resetAllButton = document.querySelector("#reset-all");
-
-function renderBoardPreview() {
-  const previewMarkup = Array.from({ length: 8 }, (_, index) => {
-    const artwork = artworks[index % artworks.length];
-    const isFaceUp = index % 3 === 0;
-    return `
-      <div class="mini-card mini-card--${isFaceUp ? "front" : "back"} mini-card--${index + 1}">
-        <div class="mini-card__tile">
-          ${
-            isFaceUp
-              ? `<div class="mini-card__art ${artwork.className}" aria-label="${artwork.label}"></div>`
-              : `<div class="mini-card__pattern"></div>`
-          }
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  boardPreview.innerHTML = previewMarkup;
-}
-
-function renderCatalog() {
-  catalog.innerHTML = variants
-    .map((variant, index) => {
-      const artwork = artworks[index % artworks.length];
-
-      return `
-        <article class="catalog-item variant-${variant.id}">
-          <div class="catalog-item__copy">
-            <div class="catalog-item__heading">
-              <p class="catalog-item__number">${variant.number}</p>
-              <div>
-                <h3>${variant.name}</h3>
-                <p class="catalog-item__summary">${variant.summary}</p>
-              </div>
-            </div>
-
-            <div class="catalog-item__chips">
-              ${variant.cues.map((cue) => `<span>${cue}</span>`).join("")}
-            </div>
-
-            <dl class="catalog-item__stats">
-              <div>
-                <dt>Pace</dt>
-                <dd>${variant.stats.pace}</dd>
-              </div>
-              <div>
-                <dt>Feel</dt>
-                <dd>${variant.stats.mood}</dd>
-              </div>
-              <div>
-                <dt>Bias</dt>
-                <dd>${variant.stats.bias}</dd>
-              </div>
-            </dl>
-
-            <div class="catalog-item__actions">
-              <button class="catalog-item__button catalog-item__button--primary" data-action="flip" type="button">
-                Flip sample
-              </button>
-              <button class="catalog-item__button" data-action="loop" type="button">
-                Auto loop
-              </button>
-            </div>
-
-            <div class="catalog-item__telemetry" aria-live="polite">
-              <span data-field="direction">Entry: right</span>
-              <span data-field="tilt">Tilt: +0.0deg</span>
-              <span data-field="roll">Roll: +0.0deg</span>
-            </div>
-          </div>
-
-          <div class="catalog-item__scene">
-            <div class="catalog-item__glow"></div>
-            <button
-              class="memory-card"
-              type="button"
-              data-variant="${variant.id}"
-              data-face="back"
-              aria-label="Flip ${variant.name} card sample"
-            >
-              <span class="memory-card__shadow"></span>
-              <span class="memory-card__body">
-                <span class="memory-card__face memory-card__face--back">
-                  <span class="memory-card__back-pattern"></span>
-                  <span class="memory-card__seal">memory</span>
-                </span>
-                <span class="memory-card__face memory-card__face--front">
-                  <span class="memory-card__print">
-                    <span class="memory-card__art ${artwork.className}" aria-hidden="true"></span>
-                  </span>
-                </span>
-              </span>
-            </button>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-}
+const state = {
+  cards: [],
+  flippedCards: [],
+  matchedPairs: 0,
+  moves: 0,
+  busy: false,
+  timerId: null,
+  startTime: null,
+};
 
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);
 }
 
-function formatSigned(value) {
-  return `${value >= 0 ? "+" : ""}${value.toFixed(1)}deg`;
+function shuffle(items) {
+  const copy = [...items];
+
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+  }
+
+  return copy;
+}
+
+function formatTime(totalSeconds) {
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+  const seconds = String(totalSeconds % 60).padStart(2, "0");
+  return `${minutes}:${seconds}`;
 }
 
 function motionTransform({ rotation, pitch, roll, lift, scale }) {
@@ -224,44 +68,105 @@ function shadowTransform(direction, distance) {
   return `translate3d(${offset}px, 8px, 0) scale(${1 + Math.abs(offset) / 90})`;
 }
 
-function flipCard(card, forceFace) {
-  const variant = variants.find((entry) => entry.id === card.dataset.variant);
+function updateHud() {
+  movesValue.textContent = String(state.moves);
+  pairsLeftValue.textContent = String((state.cards.length / 2) - state.matchedPairs);
+}
 
-  if (!variant || card.dataset.animating === "true") {
+function setStatus(message) {
+  statusText.textContent = message;
+}
+
+function resetTimer() {
+  if (state.timerId) {
+    window.clearInterval(state.timerId);
+  }
+
+  state.timerId = null;
+  state.startTime = null;
+  timerValue.textContent = "00:00";
+}
+
+function startTimerIfNeeded() {
+  if (state.timerId || state.startTime) {
     return;
   }
 
-  const body = card.querySelector(".memory-card__body");
-  const shadow = card.querySelector(".memory-card__shadow");
-  const telemetry = card
-    .closest(".catalog-item")
-    .querySelector(".catalog-item__telemetry");
+  state.startTime = Date.now();
+  state.timerId = window.setInterval(() => {
+    const elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000);
+    timerValue.textContent = formatTime(elapsedSeconds);
+  }, 1000);
+}
 
-  const currentFace = card.dataset.face;
-  const nextFace = forceFace ?? (currentFace === "back" ? "front" : "back");
+function stopTimer() {
+  if (state.timerId) {
+    window.clearInterval(state.timerId);
+  }
+
+  state.timerId = null;
+}
+
+function createDeck() {
+  return shuffle(
+    ARTWORKS.flatMap((artwork) => [
+      { key: `${artwork.id}-a`, pairId: artwork.id, artwork },
+      { key: `${artwork.id}-b`, pairId: artwork.id, artwork },
+    ]),
+  );
+}
+
+function renderBoard() {
+  board.innerHTML = state.cards
+    .map(
+      (card) => `
+        <button
+          class="memory-card"
+          type="button"
+          data-key="${card.key}"
+          data-pair-id="${card.pairId}"
+          data-face="back"
+          data-matched="false"
+          aria-label="Hidden card"
+        >
+          <span class="memory-card__shadow"></span>
+          <span class="memory-card__body">
+            <span class="memory-card__face memory-card__face--back">
+              <span class="memory-card__mark">memory</span>
+            </span>
+            <span class="memory-card__face memory-card__face--front">
+              <span class="memory-card__print">
+                <span class="memory-card__art ${card.artwork.className}" aria-hidden="true"></span>
+              </span>
+            </span>
+          </span>
+        </button>
+      `,
+    )
+    .join("");
+}
+
+function flipCardElement(cardElement, nextFace) {
+  if (cardElement.dataset.animating === "true") {
+    return Promise.resolve();
+  }
+
+  const body = cardElement.querySelector(".memory-card__body");
+  const shadow = cardElement.querySelector(".memory-card__shadow");
+  const currentFace = cardElement.dataset.face;
   const direction = Math.random() > 0.5 ? "left" : "right";
   const sign = direction === "left" ? -1 : 1;
-  const liftPeak = -randomBetween(...variant.motion.lift);
-  const pitchPeak = randomBetween(...variant.motion.pitch);
-  const rollPeak = randomBetween(...variant.motion.roll) * sign;
+  const liftPeak = -randomBetween(...SNAP_TURN.lift);
+  const pitchPeak = randomBetween(...SNAP_TURN.pitch);
+  const rollPeak = randomBetween(...SNAP_TURN.roll) * sign;
   const settleRoll = rollPeak * 0.22;
   const currentRotation = currentFace === "front" ? 180 : 0;
   const targetRotation = nextFace === "front" ? 180 : 0;
   const midpointRotation =
-    currentRotation + (targetRotation - currentRotation) * variant.motion.mid + variant.motion.overshoot * sign;
+    currentRotation + (targetRotation - currentRotation) * SNAP_TURN.mid + SNAP_TURN.overshoot * sign;
 
-  card.dataset.animating = "true";
-  card.dataset.direction = direction;
-  body.style.transformOrigin = "50% 50%";
-  shadow.style.transformOrigin = "50% 50%";
-  card.style.setProperty("--flip-direction", sign);
-  card.style.setProperty("--flip-glint-shift", `${sign * 10}px`);
-
-  telemetry.querySelector('[data-field="direction"]').textContent = `Entry: ${direction}`;
-  telemetry.querySelector('[data-field="tilt"]').textContent = `Tilt: ${formatSigned(
-    pitchPeak,
-  )}`;
-  telemetry.querySelector('[data-field="roll"]').textContent = `Roll: ${formatSigned(rollPeak)}`;
+  cardElement.dataset.animating = "true";
+  cardElement.style.setProperty("--flip-glint-shift", `${sign * 8}px`);
 
   const bodyAnimation = body.animate(
     [
@@ -275,13 +180,13 @@ function flipCard(card, forceFace) {
         }),
       },
       {
-        offset: variant.motion.mid,
+        offset: SNAP_TURN.mid,
         transform: motionTransform({
           rotation: midpointRotation,
           pitch: pitchPeak,
           roll: rollPeak,
           lift: liftPeak,
-          scale: variant.motion.scale,
+          scale: SNAP_TURN.scale,
         }),
       },
       {
@@ -295,103 +200,151 @@ function flipCard(card, forceFace) {
       },
     ],
     {
-      duration: variant.motion.duration,
-      easing: variant.motion.easing,
+      duration: SNAP_TURN.duration,
+      easing: SNAP_TURN.easing,
       fill: "forwards",
     },
   );
 
   shadow.animate(
     [
-      { opacity: 0.22, transform: shadowTransform(direction, 0), filter: "blur(12px)" },
+      { opacity: 0.18, transform: shadowTransform(direction, 0), filter: "blur(12px)" },
       {
         offset: 0.45,
-        opacity: 0.3,
-        transform: shadowTransform(direction, 6 * variant.motion.shadowBoost),
+        opacity: 0.26,
+        transform: shadowTransform(direction, 6 * SNAP_TURN.shadowBoost),
         filter: "blur(14px)",
       },
-      { opacity: 0.22, transform: shadowTransform(direction, 2), filter: "blur(12px)" },
+      { opacity: 0.18, transform: shadowTransform(direction, 2), filter: "blur(12px)" },
     ],
     {
-      duration: variant.motion.duration,
-      easing: variant.motion.easing,
+      duration: SNAP_TURN.duration,
+      easing: SNAP_TURN.easing,
       fill: "forwards",
     },
   );
 
-  bodyAnimation.addEventListener("finish", () => {
-    card.dataset.face = nextFace;
-    card.dataset.animating = "false";
-    body.style.transform = motionTransform({
-      rotation: targetRotation,
-      pitch: 0,
-      roll: 0,
-      lift: 0,
-      scale: 1,
-    });
-    shadow.style.transform = shadowTransform(direction, 2);
-    shadow.style.opacity = "0.22";
+  return new Promise((resolve) => {
+    bodyAnimation.addEventListener(
+      "finish",
+      () => {
+        cardElement.dataset.face = nextFace;
+        cardElement.dataset.animating = "false";
+        body.style.transform = motionTransform({
+          rotation: targetRotation,
+          pitch: 0,
+          roll: 0,
+          lift: 0,
+          scale: 1,
+        });
+        shadow.style.transform = shadowTransform(direction, 2);
+        shadow.style.opacity = "0.18";
+        resolve();
+      },
+      { once: true },
+    );
   });
 }
 
-function attachEvents() {
-  const cards = document.querySelectorAll(".memory-card");
-  const loopTimers = new WeakMap();
+async function handleMismatch() {
+  state.busy = true;
+  setStatus("Not a pair. The cards turn back quietly.");
+  const [firstCard, secondCard] = state.flippedCards;
 
-  cards.forEach((card) => {
-    const container = card.closest(".catalog-item");
-    const flipButton = container.querySelector('[data-action="flip"]');
-    const loopButton = container.querySelector('[data-action="loop"]');
+  await new Promise((resolve) => window.setTimeout(resolve, 720));
+  await Promise.all([
+    flipCardElement(firstCard.element, "back"),
+    flipCardElement(secondCard.element, "back"),
+  ]);
 
-    card.addEventListener("click", () => flipCard(card));
-    flipButton.addEventListener("click", () => flipCard(card));
+  firstCard.element.setAttribute("aria-label", "Hidden card");
+  secondCard.element.setAttribute("aria-label", "Hidden card");
+  state.flippedCards = [];
+  state.busy = false;
+  setStatus("Keep going. There is always a little left or right bias in the turn.");
+}
 
-    loopButton.addEventListener("click", () => {
-      const activeTimer = loopTimers.get(card);
+function handleMatch() {
+  const [firstCard, secondCard] = state.flippedCards;
+  firstCard.matched = true;
+  secondCard.matched = true;
+  firstCard.element.dataset.matched = "true";
+  secondCard.element.dataset.matched = "true";
+  firstCard.element.classList.add("is-matched");
+  secondCard.element.classList.add("is-matched");
+  firstCard.element.setAttribute("aria-label", `${firstCard.artwork.label}, matched`);
+  secondCard.element.setAttribute("aria-label", `${secondCard.artwork.label}, matched`);
+  state.flippedCards = [];
+  state.matchedPairs += 1;
+  updateHud();
 
-      if (activeTimer) {
-        clearInterval(activeTimer);
-        loopTimers.delete(card);
-        loopButton.textContent = "Auto loop";
-        loopButton.dataset.active = "false";
-        return;
-      }
+  if (state.matchedPairs === state.cards.length / 2) {
+    stopTimer();
+    setStatus(`Board cleared in ${state.moves} moves.`);
+    return;
+  }
 
-      flipCard(card);
-      const timer = window.setInterval(() => flipCard(card), 1800);
-      loopTimers.set(card, timer);
-      loopButton.textContent = "Stop loop";
-      loopButton.dataset.active = "true";
-    });
-  });
+  setStatus("Pair found. Keep the rhythm.");
+}
 
-  flipAllButton.addEventListener("click", () => {
-    cards.forEach((card, index) => {
-      window.setTimeout(() => flipCard(card), index * 120);
-    });
-  });
+async function onCardClick(event) {
+  const cardElement = event.currentTarget;
+  const card = state.cards.find((entry) => entry.key === cardElement.dataset.key);
 
-  resetAllButton.addEventListener("click", () => {
-    cards.forEach((card, index) => {
-      const container = card.closest(".catalog-item");
-      const loopButton = container.querySelector('[data-action="loop"]');
-      const activeTimer = loopTimers.get(card);
+  if (!card || state.busy || card.matched || state.flippedCards.some((entry) => entry.key === card.key)) {
+    return;
+  }
 
-      if (activeTimer) {
-        clearInterval(activeTimer);
-        loopTimers.delete(card);
-      }
+  if (cardElement.dataset.face === "front") {
+    return;
+  }
 
-      loopButton.textContent = "Auto loop";
-      loopButton.dataset.active = "false";
+  startTimerIfNeeded();
+  state.busy = true;
+  await flipCardElement(cardElement, "front");
+  cardElement.setAttribute("aria-label", card.artwork.label);
+  card.element = cardElement;
+  state.flippedCards.push(card);
 
-      if (card.dataset.face === "front") {
-        window.setTimeout(() => flipCard(card, "back"), index * 80);
-      }
-    });
+  if (state.flippedCards.length < 2) {
+    state.busy = false;
+    setStatus("One open card. Find its pair.");
+    return;
+  }
+
+  state.moves += 1;
+  updateHud();
+
+  const [firstCard, secondCard] = state.flippedCards;
+
+  if (firstCard.pairId === secondCard.pairId) {
+    handleMatch();
+    state.busy = false;
+    return;
+  }
+
+  await handleMismatch();
+}
+
+function attachBoardEvents() {
+  board.querySelectorAll(".memory-card").forEach((cardElement) => {
+    cardElement.addEventListener("click", onCardClick);
   });
 }
 
-renderBoardPreview();
-renderCatalog();
-attachEvents();
+function newGame() {
+  resetTimer();
+  state.cards = createDeck().map((card) => ({ ...card, matched: false, element: null }));
+  state.flippedCards = [];
+  state.matchedPairs = 0;
+  state.moves = 0;
+  state.busy = false;
+  renderBoard();
+  attachBoardEvents();
+  updateHud();
+  setStatus("Find all matching pairs. Cards flip with a slight left or right bias, but stay inside the grid.");
+}
+
+newGameButton.addEventListener("click", newGame);
+
+newGame();
