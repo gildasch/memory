@@ -19,8 +19,10 @@ const pairsLeftValue = document.querySelector("#pairs-left");
 const newGameButton = document.querySelector("#new-game");
 const sidebarToggle = document.querySelector("#sidebar-toggle");
 const themeModeToggle = document.querySelector("#theme-mode-toggle");
+const playersSelect = document.querySelector("#players-select");
 const themeSelect = document.querySelector("#theme-select");
 const pairsSelect = document.querySelector("#pairs-select");
+const playerBannerText = document.querySelector("#player-banner-text");
 const THEME_MODE_STORAGE_KEY = "memory-theme-mode";
 const GAME_SETTINGS_STORAGE_KEY = "memory-game-settings";
 const GAME_SESSION_STORAGE_KEY = "memory-game-session";
@@ -35,6 +37,9 @@ const state = {
   timerId: null,
   startTime: null,
   elapsedSeconds: 0,
+  playerCount: 1,
+  currentPlayerIndex: 0,
+  playerTurns: [0],
   selectedThemeId: "animals",
   pairCount: 8,
   rowLengths: [],
@@ -62,6 +67,7 @@ function saveGameSettings() {
   window.localStorage.setItem(
     GAME_SETTINGS_STORAGE_KEY,
     JSON.stringify({
+      playerCount: state.playerCount,
       selectedThemeId: state.selectedThemeId,
       pairCount: state.pairCount,
     }),
@@ -76,6 +82,9 @@ function loadGameSettings() {
 
   try {
     const parsedSettings = JSON.parse(rawSettings);
+    if (Number.isFinite(parsedSettings.playerCount)) {
+      state.playerCount = Math.max(1, Math.min(4, parsedSettings.playerCount));
+    }
     if (parsedSettings.selectedThemeId in THEMES) {
       state.selectedThemeId = parsedSettings.selectedThemeId;
     }
@@ -114,6 +123,9 @@ function saveGameSession() {
     JSON.stringify({
       selectedThemeId: state.selectedThemeId,
       pairCount: state.pairCount,
+      playerCount: state.playerCount,
+      currentPlayerIndex: state.currentPlayerIndex,
+      playerTurns: state.playerTurns,
       moves: state.moves,
       matchedPairs: state.matchedPairs,
       elapsedSeconds: state.elapsedSeconds,
@@ -187,6 +199,13 @@ function clampPairCount() {
   state.pairCount = Math.max(2, Math.min(state.pairCount, maxPairs));
 }
 
+function syncPlayerState() {
+  state.playerCount = Math.max(1, Math.min(4, state.playerCount));
+  const nextTurns = Array.from({ length: state.playerCount }, (_, index) => state.playerTurns[index] ?? 0);
+  state.playerTurns = nextTurns;
+  state.currentPlayerIndex = Math.max(0, Math.min(state.currentPlayerIndex, state.playerCount - 1));
+}
+
 function populateThemeSelect() {
   themeSelect.innerHTML = Object.entries(THEMES)
     .map(
@@ -207,7 +226,9 @@ function populatePairSelect() {
 }
 
 function syncControls() {
+  syncPlayerState();
   clampPairCount();
+  playersSelect.value = String(state.playerCount);
   populateThemeSelect();
   populatePairSelect();
   themeSelect.value = state.selectedThemeId;
@@ -219,8 +240,21 @@ function updateHud() {
   pairsLeftValue.textContent = String((state.cards.length / 2) - state.matchedPairs);
 }
 
+function updatePlayerBanner() {
+  const turnCount = state.playerTurns[state.currentPlayerIndex] ?? 0;
+  const turnLabel = turnCount === 1 ? "1 turn" : `${turnCount} turns`;
+  playerBannerText.textContent = `Player ${state.currentPlayerIndex + 1} · ${turnLabel}`;
+}
+
 function setStatus(message) {
   statusText.textContent = message;
+}
+
+function advanceToNextPlayer() {
+  if (state.playerCount <= 1) {
+    return;
+  }
+  state.currentPlayerIndex = (state.currentPlayerIndex + 1) % state.playerCount;
 }
 
 function resetTimer() {
@@ -459,7 +493,7 @@ function flipCardElement(cardElement, nextFace) {
 
 function handleMismatch() {
   state.pendingMismatch = [...state.flippedCards];
-  setStatus("Not a pair. Pick a different card to begin the next turn.");
+  setStatus(state.playerCount > 1 ? `Not a pair. Player ${state.currentPlayerIndex + 1} ends the turn.` : "Not a pair. Pick a different card to begin the next turn.");
   saveGameSession();
 }
 
@@ -478,6 +512,8 @@ async function clearPendingMismatch() {
   });
   state.flippedCards = [];
   state.busy = false;
+  advanceToNextPlayer();
+  updatePlayerBanner();
   saveGameSession();
 }
 
@@ -494,15 +530,16 @@ function handleMatch() {
   state.flippedCards = [];
   state.matchedPairs += 1;
   updateHud();
+  updatePlayerBanner();
 
   if (state.matchedPairs === state.cards.length / 2) {
     stopTimer();
     setSidebarOpen(true);
-    setStatus(`Board cleared in ${state.moves} moves.`);
+    setStatus(state.playerCount > 1 ? `Board cleared in ${state.moves} moves. Player ${state.currentPlayerIndex + 1} finishes ahead.` : `Board cleared in ${state.moves} moves.`);
     saveGameSession();
     return;
   }
-  setStatus("Pair found. Keep the rhythm.");
+  setStatus(state.playerCount > 1 ? `Pair found. Player ${state.currentPlayerIndex + 1} keeps the turn.` : "Pair found. Keep the rhythm.");
   saveGameSession();
 }
 
@@ -528,12 +565,14 @@ async function onCardClick(event) {
   saveGameSession();
 
   if (state.flippedCards.length < 2) {
-    setStatus("One open card. Find its pair.");
+    setStatus(state.playerCount > 1 ? `Player ${state.currentPlayerIndex + 1}: one open card. Find its pair.` : "One open card. Find its pair.");
     return;
   }
 
   state.moves += 1;
+  state.playerTurns[state.currentPlayerIndex] += 1;
   updateHud();
+  updatePlayerBanner();
   saveGameSession();
 
   const [firstCard, secondCard] = state.flippedCards;
@@ -564,6 +603,10 @@ function restoreSavedGameSession() {
 
     state.selectedThemeId = session.selectedThemeId;
     state.pairCount = session.pairCount;
+    state.playerCount = Number.isFinite(session.playerCount) ? session.playerCount : 1;
+    state.currentPlayerIndex = Number.isFinite(session.currentPlayerIndex) ? session.currentPlayerIndex : 0;
+    state.playerTurns = Array.isArray(session.playerTurns) ? session.playerTurns : [0];
+    syncPlayerState();
     clampPairCount();
 
     const restoredCards = session.cards.map((card) => {
@@ -620,6 +663,7 @@ function restoreSavedGameSession() {
     state.pendingMismatch = pendingMismatchCards.length ? pendingMismatchCards : null;
 
     updateHud();
+    updatePlayerBanner();
     timerValue.textContent = formatTime(state.elapsedSeconds);
     setStatus(typeof session.statusMessage === "string" && session.statusMessage ? session.statusMessage : `${THEMES[state.selectedThemeId].label}. ${state.pairCount} pairs selected.`);
     setSidebarOpen(Boolean(session.sidebarOpen));
@@ -633,6 +677,7 @@ function restoreSavedGameSession() {
 
 function newGame({ collapseSidebar = true } = {}) {
   resetTimer();
+  syncPlayerState();
   clampPairCount();
   saveGameSettings();
   state.cards = createDeck().map((card) => ({ ...card, matched: false, element: null, flipPromise: null }));
@@ -640,6 +685,8 @@ function newGame({ collapseSidebar = true } = {}) {
   state.pendingMismatch = null;
   state.matchedPairs = 0;
   state.moves = 0;
+  state.currentPlayerIndex = 0;
+  state.playerTurns = Array(state.playerCount).fill(0);
   state.busy = false;
   if (collapseSidebar) {
     setSidebarOpen(false);
@@ -647,9 +694,16 @@ function newGame({ collapseSidebar = true } = {}) {
   renderBoard();
   attachBoardEvents();
   updateHud();
-  setStatus(`${THEMES[state.selectedThemeId].label}. ${state.pairCount} pairs selected. New games draw a random subset from twenty themed fronts.`);
+  updatePlayerBanner();
+  setStatus(state.playerCount > 1 ? `${THEMES[state.selectedThemeId].label}. ${state.pairCount} pairs selected. Player 1 starts.` : `${THEMES[state.selectedThemeId].label}. ${state.pairCount} pairs selected. New games draw a random subset from twenty themed fronts.`);
   saveGameSession();
 }
+
+playersSelect.addEventListener("change", () => {
+  state.playerCount = Number(playersSelect.value);
+  saveGameSettings();
+  newGame({ collapseSidebar: false });
+});
 
 themeSelect.addEventListener("change", () => {
   state.selectedThemeId = themeSelect.value;

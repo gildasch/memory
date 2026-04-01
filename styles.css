@@ -231,11 +231,33 @@ select {
   overflow: hidden;
   width: 100%;
   height: calc(100vh - 24px);
-  padding: 10px;
+  padding: 10px 10px 10px 52px;
   background:
     radial-gradient(circle at top left, rgba(122, 168, 218, 0.12), transparent 30%),
     radial-gradient(circle at bottom right, rgba(16, 24, 40, 0.05), transparent 24%),
     transparent;
+}
+
+.player-banner {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 10px;
+  width: 30px;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid var(--line);
+}
+
+.player-banner__text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
 }
 
 .icon {
@@ -495,6 +517,15 @@ select {
 @media (max-width: 520px) {
   .board-stage {
     padding: 10px;
+  }
+
+  .player-banner {
+    width: 24px;
+  }
+
+  .player-banner__text {
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
   }
 
   .sidebar-toggle {

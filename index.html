@@ -44,6 +44,15 @@
           <section class="sidebar__section controls" aria-label="Game setup">
             <p class="section-label">Setup</p>
             <label class="field">
+              <span class="field__label">Players</span>
+              <select class="field__control" id="players-select">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </label>
+            <label class="field">
               <span class="field__label">Theme</span>
               <select class="field__control" id="theme-select"></select>
             </label>
@@ -93,6 +102,9 @@
       </button>
 
       <section class="board-stage">
+        <aside class="player-banner" aria-label="Current player">
+          <p class="player-banner__text" id="player-banner-text">Player 1 · 0 turns</p>
+        </aside>
         <section class="board" id="board" aria-label="Memory board"></section>
       </section>
     </main>
