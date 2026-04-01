@@ -41,8 +41,9 @@ const state = {
 
 function applyThemeMode() {
   document.documentElement.dataset.theme = state.themeMode;
-  themeModeToggle.textContent = state.themeMode === "dark" ? "Light mode" : "Dark mode";
   themeModeToggle.setAttribute("aria-pressed", String(state.themeMode === "dark"));
+  themeModeToggle.setAttribute("aria-label", state.themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode");
+  themeModeToggle.setAttribute("title", state.themeMode === "dark" ? "Light mode" : "Dark mode");
 }
 
 function loadThemeMode() {
@@ -58,7 +59,8 @@ function setSidebarOpen(isOpen) {
   state.sidebarOpen = isOpen;
   appShell.dataset.sidebarOpen = String(isOpen);
   sidebarToggle.setAttribute("aria-expanded", String(isOpen));
-  sidebarToggle.textContent = isOpen ? "Close" : "Menu";
+  sidebarToggle.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
+  sidebarToggle.setAttribute("title", isOpen ? "Close menu" : "Open menu");
   window.requestAnimationFrame(updateBoardMetrics);
 }
 

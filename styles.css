@@ -56,17 +56,10 @@ select {
 }
 
 .app-shell {
-  --sidebar-width: 58px;
-  display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  gap: 12px;
+  position: relative;
   width: 100%;
   height: 100vh;
   padding: 12px;
-}
-
-.app-shell[data-sidebar-open="true"] {
-  --sidebar-width: min(320px, 34vw);
 }
 
 .sidebar,
@@ -78,22 +71,23 @@ select {
 }
 
 .sidebar {
-  display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  overflow: hidden;
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 12px;
+  width: min(320px, calc(100vw - 24px));
+  z-index: 10;
   border-radius: 20px;
+  overflow: visible;
+  transition: transform 180ms ease;
 }
 
-.sidebar__rail {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 12px 10px;
-  border-right: 1px solid var(--line);
+.app-shell[data-sidebar-open="false"] .sidebar {
+  transform: translateX(calc(-100% + 18px));
 }
 
 .sidebar-toggle,
-.ghost-button,
+.icon-button,
 .field__control {
   border: 1px solid var(--line);
   background: var(--surface-strong);
@@ -102,36 +96,52 @@ select {
 }
 
 .sidebar-toggle,
-.ghost-button {
+.icon-button {
   border-radius: 12px;
   cursor: pointer;
   transition:
     transform 160ms ease,
     border-color 160ms ease,
-    box-shadow 160ms ease;
+    box-shadow 160ms ease,
+    opacity 160ms ease;
 }
 
 .sidebar-toggle:hover,
-.ghost-button:hover {
+.icon-button:hover {
   transform: translateY(-1px);
   border-color: var(--line-strong);
   box-shadow: 0 12px 24px var(--shadow);
 }
 
 .sidebar-toggle {
-  min-width: 38px;
-  padding: 10px 8px;
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  position: absolute;
+  top: 50%;
+  right: -16px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 72px;
+  padding: 0;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.app-shell[data-sidebar-open="false"] .sidebar-toggle {
+  right: -18px;
+}
+
+.app-shell[data-sidebar-open="true"] .icon--chevron {
+  transform: rotate(180deg);
 }
 
 .sidebar__panel {
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 12px;
+  height: 100%;
   padding: 14px;
-  overflow: hidden;
+  overflow: auto;
   opacity: 1;
   transform: translateX(0);
   transition:
@@ -163,6 +173,13 @@ select {
 
 .sidebar__section--actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  padding: 0;
 }
 
 .controls {
@@ -217,6 +234,34 @@ select {
     radial-gradient(circle at top left, rgba(122, 168, 218, 0.12), transparent 30%),
     radial-gradient(circle at bottom right, rgba(16, 24, 40, 0.05), transparent 24%),
     var(--surface-strong);
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon--chevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 180ms ease;
+}
+
+.icon--moon {
+  display: none;
+}
+
+[data-theme="dark"] .icon--sun {
+  display: none;
+}
+
+[data-theme="dark"] .icon--moon {
+  display: block;
 }
 
 .board {
@@ -471,23 +516,14 @@ select {
 
 @media (max-width: 760px) {
   .app-shell {
-    grid-template-columns: minmax(0, 1fr);
     padding: 10px;
   }
 
   .sidebar {
-    position: absolute;
     top: 10px;
     bottom: 10px;
     left: 10px;
-    z-index: 10;
     width: min(300px, calc(100vw - 20px));
-    transform: translateX(calc(-100% + 58px));
-    transition: transform 180ms ease;
-  }
-
-  .app-shell[data-sidebar-open="true"] .sidebar {
-    transform: translateX(0);
   }
 
   .hud {
@@ -502,6 +538,12 @@ select {
 @media (max-width: 520px) {
   .board-stage {
     padding: 10px;
+  }
+
+  .sidebar-toggle {
+    width: 28px;
+    height: 64px;
+    right: -14px;
   }
 
   .memory-card__mark {
