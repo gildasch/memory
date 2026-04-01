@@ -22,6 +22,7 @@ const themeModeToggle = document.querySelector("#theme-mode-toggle");
 const themeSelect = document.querySelector("#theme-select");
 const pairsSelect = document.querySelector("#pairs-select");
 const THEME_MODE_STORAGE_KEY = "memory-theme-mode";
+const GAME_SETTINGS_STORAGE_KEY = "memory-game-settings";
 
 const state = {
   cards: [],
@@ -53,6 +54,35 @@ function loadThemeMode() {
     return;
   }
   state.themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function saveGameSettings() {
+  window.localStorage.setItem(
+    GAME_SETTINGS_STORAGE_KEY,
+    JSON.stringify({
+      selectedThemeId: state.selectedThemeId,
+      pairCount: state.pairCount,
+    }),
+  );
+}
+
+function loadGameSettings() {
+  const rawSettings = window.localStorage.getItem(GAME_SETTINGS_STORAGE_KEY);
+  if (!rawSettings) {
+    return;
+  }
+
+  try {
+    const parsedSettings = JSON.parse(rawSettings);
+    if (parsedSettings.selectedThemeId in THEMES) {
+      state.selectedThemeId = parsedSettings.selectedThemeId;
+    }
+    if (Number.isFinite(parsedSettings.pairCount)) {
+      state.pairCount = parsedSettings.pairCount;
+    }
+  } catch {
+    window.localStorage.removeItem(GAME_SETTINGS_STORAGE_KEY);
+  }
 }
 
 function setSidebarOpen(isOpen) {
@@ -402,6 +432,7 @@ function handleMatch() {
 
   if (state.matchedPairs === state.cards.length / 2) {
     stopTimer();
+    setSidebarOpen(true);
     setStatus(`Board cleared in ${state.moves} moves.`);
     return;
   }
@@ -453,6 +484,7 @@ function attachBoardEvents() {
 function newGame() {
   resetTimer();
   clampPairCount();
+  saveGameSettings();
   state.cards = createDeck().map((card) => ({ ...card, matched: false, element: null, flipPromise: null }));
   state.flippedCards = [];
   state.pendingMismatch = null;
@@ -491,6 +523,7 @@ themeModeToggle.addEventListener("click", () => {
 window.addEventListener("resize", updateBoardMetrics);
 
 loadThemeMode();
+loadGameSettings();
 applyThemeMode();
 syncControls();
 newGame();
