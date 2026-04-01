@@ -310,7 +310,7 @@ select {
 .memory-card__face::before {
   content: "";
   position: absolute;
-  inset: 4px;
+  inset: 2px;
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.06));
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
@@ -321,24 +321,24 @@ select {
 }
 
 .memory-card__print {
-  inset: 12px;
+  inset: 8px;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--line);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.72);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72);
 }
 
 .memory-card__face--back::after {
   content: "";
   position: absolute;
-  inset: 14px;
+  inset: 10px;
   border-radius: 8px;
   background:
     radial-gradient(circle at center, rgba(255, 255, 255, 0.42) 0 14%, transparent 15% 100%),
     repeating-linear-gradient(45deg, var(--blue-c) 0 3px, #eff6ff 3px 6px),
     repeating-linear-gradient(-45deg, rgba(122, 168, 218, 0.68) 0 2px, var(--blue-a) 2px 5px);
   box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.68),
+    0 0 0 1px rgba(255, 255, 255, 0.68),
     0 0 0 1px rgba(16, 24, 40, 0.08) inset;
 }
 
@@ -378,12 +378,12 @@ select {
 }
 
 [data-theme="dark"] .memory-card__print {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .memory-card__face--back::after {
   box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
     0 0 0 1px rgba(255, 255, 255, 0.04) inset;
 }
 
