@@ -14,7 +14,25 @@
   </head>
   <body>
     <main class="app-shell" data-sidebar-open="false">
-      <aside class="sidebar" aria-label="Game controls">
+      <aside class="player-sidebar" aria-label="Current player">
+        <p class="player-sidebar__text" id="player-banner-text">Player 1 · 0 turns</p>
+      </aside>
+
+      <button
+        class="sidebar-toggle"
+        id="sidebar-toggle"
+        type="button"
+        aria-controls="sidebar-panel"
+        aria-expanded="false"
+        aria-label="Open menu"
+        title="Open menu"
+      >
+        <svg class="icon icon--chevron" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 6l6 6-6 6" />
+        </svg>
+      </button>
+
+      <aside class="menu-drawer" aria-label="Game controls">
         <div class="sidebar__panel" id="sidebar-panel">
           <section class="sidebar__section sidebar__section--actions">
             <button class="icon-button" id="new-game" type="button" aria-label="Start a new game" title="New game">
@@ -87,24 +105,7 @@
         </div>
       </aside>
 
-      <button
-        class="sidebar-toggle"
-        id="sidebar-toggle"
-        type="button"
-        aria-controls="sidebar-panel"
-        aria-expanded="false"
-        aria-label="Open menu"
-        title="Open menu"
-      >
-        <svg class="icon icon--chevron" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M9 6l6 6-6 6" />
-        </svg>
-      </button>
-
       <section class="board-stage">
-        <aside class="player-banner" aria-label="Current player">
-          <p class="player-banner__text" id="player-banner-text">Player 1 · 0 turns</p>
-        </aside>
         <section class="board" id="board" aria-label="Memory board"></section>
       </section>
     </main>
