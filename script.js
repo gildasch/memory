@@ -16,8 +16,10 @@ const movesValue = document.querySelector("#moves");
 const timerValue = document.querySelector("#timer");
 const pairsLeftValue = document.querySelector("#pairs-left");
 const newGameButton = document.querySelector("#new-game");
+const themeModeToggle = document.querySelector("#theme-mode-toggle");
 const themeSelect = document.querySelector("#theme-select");
 const pairsSelect = document.querySelector("#pairs-select");
+const THEME_MODE_STORAGE_KEY = "memory-theme-mode";
 
 const state = {
   cards: [],
@@ -30,7 +32,23 @@ const state = {
   startTime: null,
   selectedThemeId: "animals",
   pairCount: 8,
+  themeMode: "light",
 };
+
+function applyThemeMode() {
+  document.documentElement.dataset.theme = state.themeMode;
+  themeModeToggle.textContent = state.themeMode === "dark" ? "Light mode" : "Dark mode";
+  themeModeToggle.setAttribute("aria-pressed", String(state.themeMode === "dark"));
+}
+
+function loadThemeMode() {
+  const storedThemeMode = window.localStorage.getItem(THEME_MODE_STORAGE_KEY);
+  if (storedThemeMode === "dark" || storedThemeMode === "light") {
+    state.themeMode = storedThemeMode;
+    return;
+  }
+  state.themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
 
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);
@@ -357,6 +375,13 @@ pairsSelect.addEventListener("change", () => {
 });
 
 newGameButton.addEventListener("click", newGame);
+themeModeToggle.addEventListener("click", () => {
+  state.themeMode = state.themeMode === "dark" ? "light" : "dark";
+  window.localStorage.setItem(THEME_MODE_STORAGE_KEY, state.themeMode);
+  applyThemeMode();
+});
 
+loadThemeMode();
+applyThemeMode();
 syncControls();
 newGame();
