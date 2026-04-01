@@ -11,11 +11,13 @@ const SNAP_TURN = {
 };
 
 const board = document.querySelector("#board");
+const appShell = document.querySelector(".app-shell");
 const statusText = document.querySelector("#status");
 const movesValue = document.querySelector("#moves");
 const timerValue = document.querySelector("#timer");
 const pairsLeftValue = document.querySelector("#pairs-left");
 const newGameButton = document.querySelector("#new-game");
+const sidebarToggle = document.querySelector("#sidebar-toggle");
 const themeModeToggle = document.querySelector("#theme-mode-toggle");
 const themeSelect = document.querySelector("#theme-select");
 const pairsSelect = document.querySelector("#pairs-select");
@@ -32,6 +34,8 @@ const state = {
   startTime: null,
   selectedThemeId: "animals",
   pairCount: 8,
+  rowLengths: [],
+  sidebarOpen: false,
   themeMode: "light",
 };
 
@@ -48,6 +52,14 @@ function loadThemeMode() {
     return;
   }
   state.themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function setSidebarOpen(isOpen) {
+  state.sidebarOpen = isOpen;
+  appShell.dataset.sidebarOpen = String(isOpen);
+  sidebarToggle.setAttribute("aria-expanded", String(isOpen));
+  sidebarToggle.textContent = isOpen ? "Close" : "Menu";
+  window.requestAnimationFrame(updateBoardMetrics);
 }
 
 function randomBetween(min, max) {
@@ -146,11 +158,64 @@ function stopTimer() {
   state.timerId = null;
 }
 
-function getBoardColumns(totalCards) {
-  if (totalCards <= 16) return 4;
-  if (totalCards <= 24) return 5;
-  if (totalCards <= 32) return 6;
-  return 8;
+function alternatingRowOrder(rowCount) {
+  const order = [];
+  for (let index = 0; index < rowCount; index += 2) {
+    order.push(index);
+  }
+  for (let index = 1; index < rowCount; index += 2) {
+    order.push(index);
+  }
+  return order;
+}
+
+function distributeCardsAcrossRows(totalCards, rowCount) {
+  const baseLength = Math.floor(totalCards / rowCount);
+  if (baseLength < 2) {
+    return null;
+  }
+
+  const rowLengths = Array(rowCount).fill(baseLength);
+  const order = alternatingRowOrder(rowCount);
+  const extraCards = totalCards % rowCount;
+
+  for (let index = 0; index < extraCards; index += 1) {
+    rowLengths[order[index]] += 1;
+  }
+
+  return rowLengths;
+}
+
+function getBalancedRowLengths(totalCards) {
+  const boardRect = board.getBoundingClientRect();
+  const aspectRatio = boardRect.width > 0 && boardRect.height > 0 ? boardRect.width / boardRect.height : 1.2;
+  let bestRowLengths = [totalCards];
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  for (let rowCount = 2; rowCount <= Math.floor(totalCards / 2); rowCount += 1) {
+    const rowLengths = distributeCardsAcrossRows(totalCards, rowCount);
+    if (!rowLengths) {
+      continue;
+    }
+
+    const shortestRow = Math.min(...rowLengths);
+    const longestRow = Math.max(...rowLengths);
+    const spread = longestRow - shortestRow;
+    const layoutAspect = longestRow / rowLengths.length;
+    const score =
+      spread * 100 +
+      Math.abs(rowLengths.length - Math.sqrt(totalCards)) * 40 +
+      Math.abs(layoutAspect - aspectRatio) * 12 +
+      Math.abs(longestRow - Math.sqrt(totalCards)) * 6 +
+      rowCount * 0.1;
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestRowLengths = rowLengths;
+    }
+  }
+
+  return bestRowLengths;
 }
 
 function createDeck() {
@@ -165,34 +230,71 @@ function createDeck() {
 }
 
 function renderBoard() {
-  board.style.setProperty("--board-columns", String(getBoardColumns(state.cards.length)));
-  board.innerHTML = state.cards
-    .map(
-      (card) => `
-        <button
-          class="memory-card"
-          type="button"
-          data-key="${card.key}"
-          data-pair-id="${card.pairId}"
-          data-face="back"
-          data-matched="false"
-          aria-label="Hidden card"
-        >
-          <span class="memory-card__shadow"></span>
-          <span class="memory-card__body">
-            <span class="memory-card__face memory-card__face--back">
-              <span class="memory-card__mark">memory</span>
-            </span>
-            <span class="memory-card__face memory-card__face--front">
-              <span class="memory-card__print">
-                <span class="memory-card__art" style="background-image: url('${card.artwork.imageUrl}')" aria-hidden="true"></span>
-              </span>
-            </span>
-          </span>
-        </button>
-      `,
-    )
+  state.rowLengths = getBalancedRowLengths(state.cards.length);
+  let cursor = 0;
+
+  board.innerHTML = state.rowLengths
+    .map((rowLength) => {
+      const rowCards = state.cards.slice(cursor, cursor + rowLength);
+      cursor += rowLength;
+
+      return `
+        <div class="board__row" style="--row-columns: ${rowLength}">
+          ${rowCards
+            .map(
+              (card) => `
+                <button
+                  class="memory-card"
+                  type="button"
+                  data-key="${card.key}"
+                  data-pair-id="${card.pairId}"
+                  data-face="back"
+                  data-matched="false"
+                  aria-label="Hidden card"
+                >
+                  <span class="memory-card__shadow"></span>
+                  <span class="memory-card__body">
+                    <span class="memory-card__face memory-card__face--back">
+                      <span class="memory-card__mark">memory</span>
+                    </span>
+                    <span class="memory-card__face memory-card__face--front">
+                      <span class="memory-card__print">
+                        <span class="memory-card__art" style="background-image: url('${card.artwork.imageUrl}')" aria-hidden="true"></span>
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              `,
+            )
+            .join("")}
+        </div>
+      `;
+    })
     .join("");
+
+  window.requestAnimationFrame(updateBoardMetrics);
+}
+
+function updateBoardMetrics() {
+  if (!state.rowLengths.length) {
+    return;
+  }
+
+  const rowCount = state.rowLengths.length;
+  const longestRow = Math.max(...state.rowLengths);
+  const boardRect = board.getBoundingClientRect();
+
+  if (boardRect.width === 0 || boardRect.height === 0) {
+    return;
+  }
+
+  const gap = Math.max(6, Math.min(12, Math.floor(Math.min(boardRect.width, boardRect.height) / 42)));
+  const cardWidth = (boardRect.width - gap * (longestRow - 1)) / longestRow;
+  const cardHeight = (boardRect.height - gap * (rowCount - 1)) / rowCount;
+  const cardSize = Math.max(48, Math.floor(Math.min(cardWidth, cardHeight)));
+
+  board.style.setProperty("--board-gap", `${gap}px`);
+  board.style.setProperty("--card-size", `${cardSize}px`);
 }
 
 function flipCardElement(cardElement, nextFace) {
@@ -355,6 +457,7 @@ function newGame() {
   state.matchedPairs = 0;
   state.moves = 0;
   state.busy = false;
+  setSidebarOpen(false);
   renderBoard();
   attachBoardEvents();
   updateHud();
@@ -375,11 +478,15 @@ pairsSelect.addEventListener("change", () => {
 });
 
 newGameButton.addEventListener("click", newGame);
+sidebarToggle.addEventListener("click", () => {
+  setSidebarOpen(!state.sidebarOpen);
+});
 themeModeToggle.addEventListener("click", () => {
   state.themeMode = state.themeMode === "dark" ? "light" : "dark";
   window.localStorage.setItem(THEME_MODE_STORAGE_KEY, state.themeMode);
   applyThemeMode();
 });
+window.addEventListener("resize", updateBoardMetrics);
 
 loadThemeMode();
 applyThemeMode();
