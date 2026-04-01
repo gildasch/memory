@@ -23,9 +23,6 @@ const playersSelect = document.querySelector("#players-select");
 const themeSelect = document.querySelector("#theme-select");
 const pairsSelect = document.querySelector("#pairs-select");
 const playerBannerText = document.querySelector("#player-banner-text");
-const detailTheme = document.querySelector("#detail-theme");
-const detailProgress = document.querySelector("#detail-progress");
-const detailElapsed = document.querySelector("#detail-elapsed");
 const THEME_MODE_STORAGE_KEY = "memory-theme-mode";
 const GAME_SETTINGS_STORAGE_KEY = "memory-game-settings";
 const GAME_SESSION_STORAGE_KEY = "memory-game-session";
@@ -245,16 +242,18 @@ function updateHud() {
 }
 
 function updatePlayerBanner() {
-  const turnCount = state.playerTurns[state.currentPlayerIndex] ?? 0;
-  const turnLabel = turnCount === 1 ? "1 turn" : `${turnCount} turns`;
-  playerBannerText.textContent = `Player ${state.currentPlayerIndex + 1} · ${turnLabel}`;
+  updateSidebarDetails();
 }
 
 function updateSidebarDetails() {
+  const turnCount = state.playerTurns[state.currentPlayerIndex] ?? 0;
+  const turnLabel = turnCount === 1 ? "1 turn" : `${turnCount} turns`;
   const totalPairs = state.cards.length / 2 || state.pairCount;
-  detailTheme.textContent = THEMES[state.selectedThemeId].label;
-  detailProgress.textContent = `${state.matchedPairs} / ${totalPairs}`;
-  detailElapsed.textContent = formatTime(state.elapsedSeconds);
+  playerBannerText.textContent =
+    `Player ${state.currentPlayerIndex + 1} · ${turnLabel} · ` +
+    `${THEMES[state.selectedThemeId].label} · ` +
+    `Found ${state.matchedPairs} / ${totalPairs} · ` +
+    `${formatTime(state.elapsedSeconds)}`;
 }
 
 function setStatus(message) {

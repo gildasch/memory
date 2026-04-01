@@ -249,39 +249,6 @@ select {
   color: var(--muted);
 }
 
-.status-meta {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-}
-
-.status-meta__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--line);
-}
-
-.status-meta__row dt,
-.status-meta__row dd {
-  margin: 0;
-  font-size: 0.74rem;
-  line-height: 1.4;
-}
-
-.status-meta__row dt {
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.status-meta__row dd {
-  color: var(--ink);
-  font-weight: 600;
-  text-align: right;
-}
-
 .board-stage {
   grid-column: 3;
   overflow: hidden;
