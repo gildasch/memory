@@ -65,9 +65,7 @@ select {
 .sidebar,
 .board-stage {
   min-height: 0;
-  border: 1px solid var(--line);
   background: var(--surface);
-  box-shadow: 0 16px 40px var(--shadow-soft);
 }
 
 .sidebar {
@@ -78,12 +76,18 @@ select {
   width: min(320px, calc(100vw - 24px));
   z-index: 10;
   border-radius: 20px;
-  overflow: visible;
-  transition: transform 180ms ease;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 40px var(--shadow-soft);
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
 }
 
 .app-shell[data-sidebar-open="false"] .sidebar {
-  transform: translateX(calc(-100% + 18px));
+  transform: translateX(calc(-100% - 24px));
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sidebar-toggle,
@@ -100,13 +104,11 @@ select {
   border-radius: 12px;
   cursor: pointer;
   transition:
-    transform 160ms ease,
     border-color 160ms ease,
     box-shadow 160ms ease,
     opacity 160ms ease;
 }
 
-.sidebar-toggle:hover,
 .icon-button:hover {
   transform: translateY(-1px);
   border-color: var(--line-strong);
@@ -116,19 +118,18 @@ select {
 .sidebar-toggle {
   position: absolute;
   top: 50%;
-  right: -16px;
+  left: 12px;
   display: grid;
   place-items: center;
   width: 32px;
   height: 72px;
   padding: 0;
   border-radius: 999px;
-  transform: translateY(-50%);
   z-index: 2;
 }
 
-.app-shell[data-sidebar-open="false"] .sidebar-toggle {
-  right: -18px;
+.app-shell[data-sidebar-open="true"] .sidebar-toggle {
+  left: min(calc(320px - 16px), calc(100vw - 40px));
 }
 
 .app-shell[data-sidebar-open="true"] .icon--chevron {
@@ -228,12 +229,13 @@ select {
 .board-stage {
   position: relative;
   overflow: hidden;
-  border-radius: 24px;
-  padding: 14px;
+  width: 100%;
+  height: calc(100vh - 24px);
+  padding: 10px;
   background:
     radial-gradient(circle at top left, rgba(122, 168, 218, 0.12), transparent 30%),
     radial-gradient(circle at bottom right, rgba(16, 24, 40, 0.05), transparent 24%),
-    var(--surface-strong);
+    transparent;
 }
 
 .icon {
@@ -300,19 +302,7 @@ select {
 }
 
 .memory-card::after {
-  content: "";
-  position: absolute;
-  inset: 10px;
-  border-radius: 12px;
-  pointer-events: none;
-  background: linear-gradient(
-    115deg,
-    rgba(255, 255, 255, 0.26),
-    rgba(255, 255, 255, 0.08) 28%,
-    transparent 42%
-  );
-  opacity: 0.52;
-  transform: translateX(var(--flip-glint-shift));
+  display: none;
 }
 
 .memory-card__shadow,
@@ -325,17 +315,12 @@ select {
 }
 
 .memory-card__shadow {
-  inset: auto 10px -6px;
-  height: 22px;
-  border-radius: 999px;
-  background: rgba(16, 24, 40, 0.13);
-  filter: blur(12px);
-  opacity: 0.18;
+  display: none;
 }
 
 .memory-card__body,
 .memory-card__face {
-  border-radius: 14px;
+  border-radius: 10px;
 }
 
 .memory-card__body {
@@ -346,19 +331,9 @@ select {
 .memory-card__face {
   overflow: hidden;
   backface-visibility: hidden;
-  background: linear-gradient(180deg, var(--surface-strong) 0%, var(--surface) 100%);
-  box-shadow:
-    0 10px 18px var(--shadow-soft),
-    0 0 0 1px var(--line);
-}
-
-.memory-card__face::before {
-  content: "";
-  position: absolute;
-  inset: 2px;
-  border-radius: 10px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.06));
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  box-shadow: none;
 }
 
 .memory-card__face--front {
@@ -366,25 +341,23 @@ select {
 }
 
 .memory-card__print {
-  inset: 8px;
+  inset: 2px;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.72);
+  border: 0;
+  box-shadow: none;
 }
 
 .memory-card__face--back::after {
   content: "";
   position: absolute;
-  inset: 10px;
+  inset: 2px;
   border-radius: 8px;
   background:
     radial-gradient(circle at center, rgba(255, 255, 255, 0.42) 0 14%, transparent 15% 100%),
     repeating-linear-gradient(45deg, var(--blue-c) 0 3px, #eff6ff 3px 6px),
     repeating-linear-gradient(-45deg, rgba(122, 168, 218, 0.68) 0 2px, var(--blue-a) 2px 5px);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.68),
-    0 0 0 1px rgba(16, 24, 40, 0.08) inset;
+  box-shadow: none;
 }
 
 .memory-card__mark {
@@ -409,27 +382,7 @@ select {
 }
 
 .memory-card.is-matched .memory-card__face {
-  box-shadow:
-    0 8px 16px var(--shadow-soft),
-    0 0 0 1px var(--line-strong);
-}
-
-[data-theme="dark"] .memory-card::after {
-  opacity: 0.22;
-}
-
-[data-theme="dark"] .memory-card__face::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-}
-
-[data-theme="dark"] .memory-card__print {
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .memory-card__face--back::after {
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  border-color: var(--line-strong);
 }
 
 .art--berries {
@@ -526,6 +479,10 @@ select {
     width: min(300px, calc(100vw - 20px));
   }
 
+  .app-shell[data-sidebar-open="true"] .sidebar-toggle {
+    left: min(calc(300px - 12px), calc(100vw - 38px));
+  }
+
   .hud {
     grid-template-columns: 1fr;
   }
@@ -543,7 +500,7 @@ select {
   .sidebar-toggle {
     width: 28px;
     height: 64px;
-    right: -14px;
+    left: 10px;
   }
 
   .memory-card__mark {
