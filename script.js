@@ -493,7 +493,9 @@ function flipCardElement(cardElement, nextFace) {
 
 function handleMismatch() {
   state.pendingMismatch = [...state.flippedCards];
-  setStatus(state.playerCount > 1 ? `Not a pair. Player ${state.currentPlayerIndex + 1} ends the turn.` : "Not a pair. Pick a different card to begin the next turn.");
+  advanceToNextPlayer();
+  updatePlayerBanner();
+  setStatus(state.playerCount > 1 ? `Not a pair. Player ${state.currentPlayerIndex + 1} is up.` : "Not a pair. Click anywhere to hide the cards.");
   saveGameSession();
 }
 
@@ -512,8 +514,6 @@ async function clearPendingMismatch() {
   });
   state.flippedCards = [];
   state.busy = false;
-  advanceToNextPlayer();
-  updatePlayerBanner();
   saveGameSession();
 }
 
@@ -547,13 +547,24 @@ async function onCardClick(event) {
   const cardElement = event.currentTarget;
   const card = state.cards.find((entry) => entry.key === cardElement.dataset.key);
 
+  if (state.pendingMismatch) {
+    const canContinueWithClickedCard =
+      card &&
+      !state.busy &&
+      !card.matched &&
+      !state.flippedCards.some((entry) => entry.key === card.key) &&
+      cardElement.dataset.face !== "front" &&
+      cardElement.dataset.animating !== "true";
+
+    await clearPendingMismatch();
+
+    if (!canContinueWithClickedCard) {
+      return;
+    }
+  }
+
   if (!card || state.busy || card.matched || state.flippedCards.some((entry) => entry.key === card.key)) return;
   if (cardElement.dataset.face === "front" || cardElement.dataset.animating === "true") return;
-
-  if (state.pendingMismatch) {
-    if (state.pendingMismatch.some((entry) => entry.key === card.key)) return;
-    await clearPendingMismatch();
-  }
 
   if (state.flippedCards.length >= 2) return;
 
@@ -587,6 +598,18 @@ function attachBoardEvents() {
   board.querySelectorAll(".memory-card").forEach((cardElement) => {
     cardElement.addEventListener("click", onCardClick);
   });
+}
+
+async function onBoardClick(event) {
+  if (!state.pendingMismatch || state.busy) {
+    return;
+  }
+
+  if (event.target.closest(".memory-card")) {
+    return;
+  }
+
+  await clearPendingMismatch();
 }
 
 function restoreSavedGameSession() {
@@ -730,6 +753,7 @@ themeModeToggle.addEventListener("click", () => {
   applyThemeMode();
 });
 window.addEventListener("resize", updateBoardMetrics);
+board.addEventListener("click", onBoardClick);
 
 loadThemeMode();
 applyThemeMode();
