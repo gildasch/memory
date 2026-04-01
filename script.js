@@ -23,6 +23,7 @@ const themeSelect = document.querySelector("#theme-select");
 const pairsSelect = document.querySelector("#pairs-select");
 const THEME_MODE_STORAGE_KEY = "memory-theme-mode";
 const GAME_SETTINGS_STORAGE_KEY = "memory-game-settings";
+const GAME_SESSION_STORAGE_KEY = "memory-game-session";
 
 const state = {
   cards: [],
@@ -33,6 +34,7 @@ const state = {
   busy: false,
   timerId: null,
   startTime: null,
+  elapsedSeconds: 0,
   selectedThemeId: "animals",
   pairCount: 8,
   rowLengths: [],
@@ -83,6 +85,64 @@ function loadGameSettings() {
   } catch {
     window.localStorage.removeItem(GAME_SETTINGS_STORAGE_KEY);
   }
+}
+
+function getArtworkById(themeId, artworkId) {
+  return THEMES[themeId].items.find((artwork) => artwork.id === artworkId) ?? null;
+}
+
+function getCardFace(card, openCardKeys, pendingMismatchKeys) {
+  if (card.matched) {
+    return "front";
+  }
+  if (openCardKeys.has(card.key) || pendingMismatchKeys.has(card.key)) {
+    return "front";
+  }
+  return "back";
+}
+
+function saveGameSession() {
+  if (!state.cards.length) {
+    return;
+  }
+
+  const openCardKeys = new Set(state.flippedCards.map((card) => card.key));
+  const pendingMismatchKeys = new Set((state.pendingMismatch ?? []).map((card) => card.key));
+
+  window.localStorage.setItem(
+    GAME_SESSION_STORAGE_KEY,
+    JSON.stringify({
+      selectedThemeId: state.selectedThemeId,
+      pairCount: state.pairCount,
+      moves: state.moves,
+      matchedPairs: state.matchedPairs,
+      elapsedSeconds: state.elapsedSeconds,
+      statusMessage: statusText.textContent,
+      sidebarOpen: state.sidebarOpen,
+      cards: state.cards.map((card) => ({
+        key: card.key,
+        pairId: card.pairId,
+        artworkId: card.artwork.id,
+        matched: card.matched,
+        face: getCardFace(card, openCardKeys, pendingMismatchKeys),
+      })),
+      flippedCardKeys: [...openCardKeys],
+      pendingMismatchKeys: [...pendingMismatchKeys],
+    }),
+  );
+}
+
+function setCardFaceInstant(cardElement, face) {
+  const body = cardElement.querySelector(".memory-card__body");
+  cardElement.dataset.face = face;
+  cardElement.dataset.animating = "false";
+  body.style.transform = motionTransform({
+    rotation: face === "front" ? 180 : 0,
+    pitch: 0,
+    roll: 0,
+    lift: 0,
+    scale: 1,
+  });
 }
 
 function setSidebarOpen(isOpen) {
@@ -169,6 +229,7 @@ function resetTimer() {
   }
   state.timerId = null;
   state.startTime = null;
+  state.elapsedSeconds = 0;
   timerValue.textContent = "00:00";
 }
 
@@ -176,10 +237,11 @@ function startTimerIfNeeded() {
   if (state.timerId || state.startTime) {
     return;
   }
-  state.startTime = Date.now();
+  state.startTime = Date.now() - state.elapsedSeconds * 1000;
   state.timerId = window.setInterval(() => {
-    const elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000);
-    timerValue.textContent = formatTime(elapsedSeconds);
+    state.elapsedSeconds = Math.floor((Date.now() - state.startTime) / 1000);
+    timerValue.textContent = formatTime(state.elapsedSeconds);
+    saveGameSession();
   }, 1000);
 }
 
@@ -188,6 +250,7 @@ function stopTimer() {
     window.clearInterval(state.timerId);
   }
   state.timerId = null;
+  state.startTime = null;
 }
 
 function alternatingRowOrder(rowCount) {
@@ -397,6 +460,7 @@ function flipCardElement(cardElement, nextFace) {
 function handleMismatch() {
   state.pendingMismatch = [...state.flippedCards];
   setStatus("Not a pair. Pick a different card to begin the next turn.");
+  saveGameSession();
 }
 
 async function clearPendingMismatch() {
@@ -414,6 +478,7 @@ async function clearPendingMismatch() {
   });
   state.flippedCards = [];
   state.busy = false;
+  saveGameSession();
 }
 
 function handleMatch() {
@@ -434,9 +499,11 @@ function handleMatch() {
     stopTimer();
     setSidebarOpen(true);
     setStatus(`Board cleared in ${state.moves} moves.`);
+    saveGameSession();
     return;
   }
   setStatus("Pair found. Keep the rhythm.");
+  saveGameSession();
 }
 
 async function onCardClick(event) {
@@ -458,6 +525,7 @@ async function onCardClick(event) {
   card.element = cardElement;
   card.flipPromise = flipCardElement(cardElement, "front");
   state.flippedCards.push(card);
+  saveGameSession();
 
   if (state.flippedCards.length < 2) {
     setStatus("One open card. Find its pair.");
@@ -466,6 +534,7 @@ async function onCardClick(event) {
 
   state.moves += 1;
   updateHud();
+  saveGameSession();
 
   const [firstCard, secondCard] = state.flippedCards;
   if (firstCard.pairId === secondCard.pairId) {
@@ -481,7 +550,88 @@ function attachBoardEvents() {
   });
 }
 
-function newGame() {
+function restoreSavedGameSession() {
+  const rawSession = window.localStorage.getItem(GAME_SESSION_STORAGE_KEY);
+  if (!rawSession) {
+    return false;
+  }
+
+  try {
+    const session = JSON.parse(rawSession);
+    if (!(session.selectedThemeId in THEMES) || !Array.isArray(session.cards) || session.cards.length === 0) {
+      throw new Error("Invalid saved session");
+    }
+
+    state.selectedThemeId = session.selectedThemeId;
+    state.pairCount = session.pairCount;
+    clampPairCount();
+
+    const restoredCards = session.cards.map((card) => {
+      const artwork = getArtworkById(session.selectedThemeId, card.artworkId);
+      if (!artwork) {
+        throw new Error("Missing artwork");
+      }
+
+      return {
+        key: card.key,
+        pairId: card.pairId,
+        artwork,
+        matched: Boolean(card.matched),
+        element: null,
+        flipPromise: null,
+      };
+    });
+
+    state.cards = restoredCards;
+    state.moves = Number.isFinite(session.moves) ? session.moves : 0;
+    state.matchedPairs = Number.isFinite(session.matchedPairs) ? session.matchedPairs : restoredCards.filter((card) => card.matched).length / 2;
+    state.elapsedSeconds = Number.isFinite(session.elapsedSeconds) ? session.elapsedSeconds : 0;
+    state.pendingMismatch = null;
+    state.flippedCards = [];
+    state.busy = false;
+
+    syncControls();
+    renderBoard();
+    attachBoardEvents();
+
+    const cardByKey = new Map(state.cards.map((card) => [card.key, card]));
+    const openCardKeys = new Set(Array.isArray(session.flippedCardKeys) ? session.flippedCardKeys : []);
+    const pendingMismatchKeys = new Set(Array.isArray(session.pendingMismatchKeys) ? session.pendingMismatchKeys : []);
+
+    state.cards.forEach((card, index) => {
+      const cardElement = board.querySelector(`.memory-card[data-key="${card.key}"]`);
+      card.element = cardElement;
+
+      const savedCard = session.cards[index];
+      const face = savedCard?.face === "front" || card.matched ? "front" : "back";
+      setCardFaceInstant(cardElement, face);
+
+      if (card.matched) {
+        cardElement.dataset.matched = "true";
+        cardElement.classList.add("is-matched");
+        cardElement.setAttribute("aria-label", `${card.artwork.label}, matched`);
+      } else if (face === "front") {
+        cardElement.setAttribute("aria-label", card.artwork.label);
+      }
+    });
+
+    state.flippedCards = [...openCardKeys].map((key) => cardByKey.get(key)).filter(Boolean);
+    const pendingMismatchCards = [...pendingMismatchKeys].map((key) => cardByKey.get(key)).filter(Boolean);
+    state.pendingMismatch = pendingMismatchCards.length ? pendingMismatchCards : null;
+
+    updateHud();
+    timerValue.textContent = formatTime(state.elapsedSeconds);
+    setStatus(typeof session.statusMessage === "string" && session.statusMessage ? session.statusMessage : `${THEMES[state.selectedThemeId].label}. ${state.pairCount} pairs selected.`);
+    setSidebarOpen(Boolean(session.sidebarOpen));
+    saveGameSession();
+    return true;
+  } catch {
+    window.localStorage.removeItem(GAME_SESSION_STORAGE_KEY);
+    return false;
+  }
+}
+
+function newGame({ collapseSidebar = true } = {}) {
   resetTimer();
   clampPairCount();
   saveGameSettings();
@@ -491,11 +641,14 @@ function newGame() {
   state.matchedPairs = 0;
   state.moves = 0;
   state.busy = false;
-  setSidebarOpen(false);
+  if (collapseSidebar) {
+    setSidebarOpen(false);
+  }
   renderBoard();
   attachBoardEvents();
   updateHud();
   setStatus(`${THEMES[state.selectedThemeId].label}. ${state.pairCount} pairs selected. New games draw a random subset from twenty themed fronts.`);
+  saveGameSession();
 }
 
 themeSelect.addEventListener("change", () => {
@@ -503,12 +656,14 @@ themeSelect.addEventListener("change", () => {
   clampPairCount();
   populatePairSelect();
   pairsSelect.value = String(state.pairCount);
-  newGame();
+  saveGameSettings();
+  newGame({ collapseSidebar: false });
 });
 
 pairsSelect.addEventListener("change", () => {
   state.pairCount = Number(pairsSelect.value);
-  newGame();
+  saveGameSettings();
+  newGame({ collapseSidebar: false });
 });
 
 newGameButton.addEventListener("click", newGame);
@@ -523,7 +678,9 @@ themeModeToggle.addEventListener("click", () => {
 window.addEventListener("resize", updateBoardMetrics);
 
 loadThemeMode();
-loadGameSettings();
 applyThemeMode();
-syncControls();
-newGame();
+if (!restoreSavedGameSession()) {
+  loadGameSettings();
+  syncControls();
+  newGame();
+}
